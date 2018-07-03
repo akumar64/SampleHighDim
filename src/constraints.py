@@ -1,6 +1,8 @@
 import numpy as np
+import toolbox
 
-class Constraints():
+
+class Constraints:
     """Constraints loaded from a file."""
 
     def __init__(self, fname):
@@ -53,18 +55,32 @@ class Constraints():
         """
         Evaluate constraints and return vector of "error" from zero
 
-        :param x:  array of point to check
+        :param x:  array (vector) of point to check
         :return: vector of "error"
         """
-
-        error_vec = np.empty([self.n_dim], dtype="float32")
-
+        error_vec = np.empty(len(self.exprs), dtype="float32")
         ind = 0
         for expr in self.exprs:
             eval_val = eval(expr)
-            if eval_val >= 0:
-                eval_val = 0
             error_vec[ind] = eval_val
             ind += 1
 
         return error_vec
+
+    def calc_error_distance(self, x):
+        """
+        Linearizes the constraints and finds the delta x required to satisfy each constraint
+        And finds the probable distance x has to move to satisfy all constraints
+
+        :param x: array (vector) of point to check
+        :return: probable distance x has to move
+        """
+        dx = np.zeros(np.size(x), dtype="float32")
+        err_vec = self.evaluate(x)
+
+        # heuristically combines the vector to satisfy each constraint into a final delta x vector
+        for ind in range(len(self.exprs)):
+            dx_ind = toolbox.calc_dx(self.exprs[ind], x, err_vec[ind])
+            dx[abs(dx_ind) > abs(dx)] = dx_ind[abs(dx_ind) > abs(dx)]
+
+        return toolbox.calc_norm(dx), dx
